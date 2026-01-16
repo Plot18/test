@@ -4,27 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web3 Launchpad</title>
-    
-    <!-- 加载 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 加载 React 和 ReactDOM -->
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    
-    <!-- 加载 Babel 用于解析 JSX -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-    
-    <!-- 加载 Ethers.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
-
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        
         @keyframes pulse-blue {
             0%, 100% { background-color: #e0f2fe; }
             50% { background-color: #bae6fd; }
@@ -33,87 +23,31 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
-
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState, useEffect, useCallback } = React;
         const { ethers } = window;
 
-        // --- 0. 图标组件 ---
-        const WalletIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h2v-4Z"/></svg>
-        );
-        const CoinsIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>
-        );
-        const PlayIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        );
-        const RefreshIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-        );
-        const CheckCircleIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        );
-        const LoaderIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`animate-spin ${className}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        );
-        const SettingsIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        );
+        // Icons
+        const WalletIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h2v-4Z"/></svg>;
+        const CoinsIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>;
+        const PlayIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+        const RefreshIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>;
+        const CheckCircleIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        const LoaderIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`animate-spin ${className}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
+        const SettingsIcon = ({ size = 20, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
 
-        // --- 1. 配置与 ABI ---
         const FACTORY_ADDRESS = "0x381dd293A5dE117D0466Ab56f8A4af6237CbCf23";
+        const ERC20_ABI = ["function name() view returns (string)", "function symbol() view returns (string)", "function decimals() view returns (uint8)", "function balanceOf(address) view returns (uint256)", "function approve(address spender, uint256 amount) returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
+        const FACTORY_ABI = ["function createProject(uint256 _startBlock, uint256 _endBlock, address _presaleToken, uint256 _presaleAmount, address _baseToken, uint256 _tokenExchangeRate, address _adminAddress, uint256 _minHeldNum)", "function getAllProjectlist() view returns (address[])", "function isWhitelisted(address user) view returns (bool)"];
+        const PROJECT_ABI = ["function product() view returns (uint256, uint256, address, address, uint256, uint256, uint256, uint256, address, uint256)", "function setting() view returns (uint256, uint256, bool, bool)", "function buyToken(uint256 amount)", "function addCandy(uint256 amount)", "function updateSetting(uint256 _maxBuy, uint256 _minPerBuy)", "function pauseProject()", "function resumeProject()"];
 
-        const ERC20_ABI = [
-            "function name() view returns (string)",
-            "function symbol() view returns (string)",
-            "function decimals() view returns (uint8)",
-            "function balanceOf(address) view returns (uint256)",
-            "function approve(address spender, uint256 amount) returns (bool)",
-            "function allowance(address owner, address spender) view returns (uint256)"
-        ];
-
-        const FACTORY_ABI = [
-            "function createProject(uint256 _startBlock, uint256 _endBlock, address _presaleToken, uint256 _presaleAmount, address _baseToken, uint256 _tokenExchangeRate, address _adminAddress, uint256 _minHeldNum)",
-            "function getAllProjectlist() view returns (address[])",
-            "function isWhitelisted(address user) view returns (bool)",
-            "event ProjectCreated(address indexed project, address indexed presaleToken, address indexed baseToken)"
-        ];
-
-        const PROJECT_ABI = [
-            "function product() view returns (uint256, uint256, address, address, uint256, uint256, uint256, uint256, address, uint256)",
-            "function setting() view returns (uint256, uint256, bool, bool)",
-            "function buyToken(uint256 amount)",
-            "function addCandy(uint256 amount)"
-        ];
-
-        // --- 2. 辅助组件 ---
-        const Card = ({ children, className = "" }) => (
-            <div className={`bg-white rounded-xl shadow-md border border-gray-100 p-6 ${className}`}>
-                {children}
-            </div>
-        );
-
+        const Card = ({ children, className = "" }) => <div className={`bg-white rounded-xl shadow-md border border-gray-100 p-6 ${className}`}>{children}</div>;
         const Button = ({ onClick, disabled, children, variant = "primary", className = "" }) => {
-            const baseStyle = "px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2";
-            const variants = {
-                primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
-                secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100",
-                outline: "border border-gray-300 text-gray-700 hover:bg-gray-50",
-                success: "bg-green-600 text-white hover:bg-green-700",
-                danger: "bg-red-50 text-red-600 hover:bg-red-100",
-                warning: "bg-yellow-500 text-white hover:bg-yellow-600"
-            };
-            return (
-                <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>
-                    {children}
-                </button>
-            );
+            const variants = { primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300", secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100", warning: "bg-yellow-500 text-white hover:bg-yellow-600" };
+            return <button onClick={onClick} disabled={disabled} className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${variants[variant]} ${className}`}>{children}</button>;
         };
 
-        // --- 3. 主应用 ---
         function LaunchpadApp() {
             const [account, setAccount] = useState("");
             const [provider, setProvider] = useState(null);
@@ -126,16 +60,7 @@
             const [statusMsg, setStatusMsg] = useState(""); 
             const [refreshTrigger, setRefreshTrigger] = useState(0); 
             
-            const [formData, setFormData] = useState({
-                presaleToken: "",
-                baseToken: "",
-                presaleAmount: "",
-                tokenDecimals: "18", 
-                exchangeRate: "",
-                startBlock: "",
-                endBlock: "",
-                minHeld: "0"
-            });
+            const [formData, setFormData] = useState({ presaleToken: "", baseToken: "", presaleAmount: "", tokenDecimals: "18", exchangeRate: "", startBlock: "", endBlock: "", minHeld: "0" });
 
             const connectWallet = async () => {
                 if (window.ethereum) {
@@ -143,21 +68,12 @@
                         const _provider = new ethers.BrowserProvider(window.ethereum);
                         const _signer = await _provider.getSigner();
                         const _account = await _signer.getAddress();
-                        
-                        setProvider(_provider);
-                        setSigner(_signer);
-                        setAccount(_account);
-                        
+                        setProvider(_provider); setSigner(_signer); setAccount(_account);
                         const block = await _provider.getBlockNumber();
                         setCurrentBlock(block);
                         checkWhitelist(_account, _provider);
-                    } catch (err) {
-                        console.error("连接过程出错:", err);
-                        alert("连接钱包失败: " + err.message);
-                    }
-                } else {
-                    alert("请安装 MetaMask!");
-                }
+                    } catch (err) { alert("连接失败: " + err.message); }
+                } else { alert("请安装 MetaMask!"); }
             };
 
             const checkWhitelist = async (userAddress, providerInstance) => {
@@ -165,19 +81,15 @@
                     const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, providerInstance);
                     const status = await factory.isWhitelisted(userAddress);
                     setIsWhitelisted(status);
-                } catch (err) {
-                    console.error("检查白名单失败", err);
-                }
+                } catch (err) { console.error(err); }
             };
 
-            // 数据获取
             const fetchProjects = async () => {
                 if (!provider) return;
                 setLoading(true);
                 try {
                     const block = await provider.getBlockNumber();
                     setCurrentBlock(block);
-
                     const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
                     const projectAddresses = await factory.getAllProjectlist();
                     
@@ -187,23 +99,20 @@
                             const product = await projectContract.product();
                             const setting = await projectContract.setting();
                             
-                            let tokenSymbol = "TOKEN";
-                            let presaleDecimals = 18;
+                            let tokenSymbol = "TOKEN", presaleDecimals = 18;
                             try {
                                 const tokenContract = new ethers.Contract(product[2], ERC20_ABI, provider);
                                 tokenSymbol = await tokenContract.symbol();
                                 presaleDecimals = Number(await tokenContract.decimals());
                             } catch (e) {}
 
-                            let baseDecimals = 18;
-                            let baseSymbol = "BASE";
+                            let baseDecimals = 18, baseSymbol = "BASE";
                             try {
                                 const baseTokenContract = new ethers.Contract(product[3], ERC20_ABI, provider);
                                 baseDecimals = Number(await baseTokenContract.decimals());
                                 baseSymbol = await baseTokenContract.symbol();
                             } catch(e) {}
 
-                            // 获取合约本身的预售代币余额 (即库存)
                             let contractBalance = "0";
                             try {
                                 const tokenContract = new ethers.Contract(product[2], ERC20_ABI, provider);
@@ -222,38 +131,20 @@
                                 exchangeRate: product[7].toString(),
                                 admin: product[8],
                                 paused: setting[2],
-                                tokenSymbol,
-                                baseSymbol,
-                                baseDecimals, 
-                                presaleDecimals,
-                                minPerBuy: setting[1], 
-                                maxBuy: setting[0],
-                                contractBalance // 合约实际库存
+                                tokenSymbol, baseSymbol, baseDecimals, presaleDecimals,
+                                minPerBuy: setting[1], maxBuy: setting[0], contractBalance
                             };
-                        } catch (err) {
-                            console.error(`获取项目 ${addr} 详情失败`, err);
-                            return null;
-                        }
+                        } catch (err) { return null; }
                     });
-
                     const results = await Promise.all(projectDataPromises);
                     setProjects(results.filter(p => p !== null));
-                } catch (err) {
-                    console.error("获取项目列表失败", err);
-                } finally {
-                    setLoading(false);
-                }
+                } catch (err) { console.error(err); } finally { setLoading(false); }
             };
 
             useEffect(() => {
                 if (provider) {
                     fetchProjects();
-                    const interval = setInterval(async () => {
-                        try {
-                            const block = await provider.getBlockNumber();
-                            setCurrentBlock(block);
-                        } catch(e) {}
-                    }, 15000); 
+                    const interval = setInterval(async () => { try { const block = await provider.getBlockNumber(); setCurrentBlock(block); } catch(e) {} }, 15000);
                     return () => clearInterval(interval);
                 }
             }, [provider, refreshTrigger]);
@@ -262,152 +153,72 @@
                 if (!provider) return;
                 const block = await provider.getBlockNumber();
                 setCurrentBlock(block);
-                
-                const buffer = 200; 
-                const duration = 7200; 
-                const start = block + buffer; 
-                const end = start + duration;
-                
-                setFormData({
-                    ...formData,
-                    startBlock: start.toString(),
-                    endBlock: end.toString()
-                });
+                const buffer = 200, duration = 7200;
+                setFormData({ ...formData, startBlock: (block + buffer).toString(), endBlock: (block + buffer + duration).toString() });
             };
 
             const handleCreateProject = async () => {
                 if (!signer) return;
                 try {
-                    setStatusMsg("🔍 正在检查区块高度...");
+                    setStatusMsg("🔍 检查区块...");
                     const latestBlock = await provider.getBlockNumber();
-                    let finalStartBlock = BigInt(formData.startBlock);
-                    let finalEndBlock = BigInt(formData.endBlock);
-
-                    if (finalStartBlock <= BigInt(latestBlock) + 50n) {
-                        const safeStart = BigInt(latestBlock) + 200n; 
-                        const safeEnd = safeStart + 7200n;
-                        const confirmFix = confirm(`⚠️ 开始时间可能已过期！\n\n建议自动修正为：\n最新区块 + 200 (约几分钟后开始)`);
-                        if (!confirmFix) {
-                            setStatusMsg("");
-                            return;
-                        }
-                        finalStartBlock = safeStart;
-                        finalEndBlock = safeEnd;
-                        setFormData({...formData, startBlock: safeStart.toString(), endBlock: safeEnd.toString()});
+                    let finalStart = BigInt(formData.startBlock), finalEnd = BigInt(formData.endBlock);
+                    if (finalStart <= BigInt(latestBlock) + 50n) {
+                        if (!confirm("⚠️ 开始时间可能已过期，是否自动修正为最新区块 + 200？")) { setStatusMsg(""); return; }
+                        finalStart = BigInt(latestBlock) + 200n; finalEnd = finalStart + 7200n;
                     }
-
                     const decimals = parseInt(formData.tokenDecimals || "18");
                     const amountWei = ethers.parseUnits(formData.presaleAmount, decimals);
-
-                    // 1. 创建项目
-                    setStatusMsg("🚀 正在发起创建交易...");
+                    
+                    setStatusMsg("🚀 发起创建交易...");
                     const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
-                    
-                    const tx = await factory.createProject(
-                        finalStartBlock,
-                        finalEndBlock,
-                        formData.presaleToken,
-                        amountWei, // 这个 amount 只是设置上限，不涉及转账
-                        formData.baseToken,
-                        BigInt(formData.exchangeRate),
-                        account,
-                        BigInt(formData.minHeld),
-                        { gasLimit: 6000000 } 
-                    );
-                    
-                    setStatusMsg("⏳ 项目部署中，请稍候...");
+                    const tx = await factory.createProject(finalStart, finalEnd, formData.presaleToken, amountWei, formData.baseToken, BigInt(formData.exchangeRate), account, BigInt(formData.minHeld), { gasLimit: 6000000 });
+                    setStatusMsg("⏳ 部署中...");
                     await tx.wait();
-                    
-                    setStatusMsg("✅ 项目创建成功！请在列表中找到项目并充值代币。");
-                    setTimeout(() => {
-                        setShowCreateForm(false);
-                        setStatusMsg("");
-                        fetchProjects();
-                    }, 2000);
-
-                } catch (err) {
-                    console.error(err);
-                    setStatusMsg("❌ 操作失败");
-                    let errMsg = err.reason || err.message || JSON.stringify(err);
-                    alert(errMsg); 
-                }
+                    setStatusMsg("✅ 成功！请去列表中充值。");
+                    setTimeout(() => { setShowCreateForm(false); setStatusMsg(""); fetchProjects(); }, 2000);
+                } catch (err) { setStatusMsg(""); alert(err.reason || err.message); }
             };
 
-            // 管理员设置面板 (仅保留充值功能)
             const AdminSettings = ({ project, onClose }) => {
                 const [candyAmount, setCandyAmount] = useState("");
                 const [working, setWorking] = useState(false);
-
-                // 自动填入缺口
                 const fillGap = () => {
-                    const target = parseFloat(project.presaleAmount);
-                    const current = parseFloat(project.contractBalance);
-                    const gap = target - current;
+                    const gap = parseFloat(project.presaleAmount) - parseFloat(project.contractBalance);
                     setCandyAmount(gap > 0 ? gap.toString() : "0");
                 };
-
                 const handleAddCandy = async () => {
                     if (!signer) return;
                     setWorking(true);
                     try {
                         const projectContract = new ethers.Contract(project.address, PROJECT_ABI, signer);
                         const tokenContract = new ethers.Contract(project.presaleToken, ERC20_ABI, signer);
-                        
                         const amountWei = ethers.parseUnits(candyAmount, project.presaleDecimals);
-
-                        // 1. 授权
-                        setStatusMsg("🔐 正在授权转入...");
+                        setStatusMsg("🔐 授权转入...");
                         const approveTx = await tokenContract.approve(project.address, amountWei);
                         await approveTx.wait();
-
-                        // 2. 充值
-                        setStatusMsg("🍬 正在注入代币...");
+                        setStatusMsg("🍬 注入代币...");
                         const addTx = await projectContract.addCandy(amountWei);
                         await addTx.wait();
-
-                        setStatusMsg("✅ 充值成功！");
-                        alert("充值成功！现在用户可以购买了。");
-                        fetchProjects(); // 刷新数据
-                        setCandyAmount("");
-                    } catch (err) {
-                        console.error(err);
-                        alert("充值失败: " + (err.reason || err.message));
-                    } finally {
-                        setWorking(false);
-                        setStatusMsg("");
-                    }
+                        alert("充值成功！"); fetchProjects(); setCandyAmount("");
+                    } catch (err) { alert(err.reason || err.message); } finally { setWorking(false); setStatusMsg(""); }
                 };
-
                 return (
                     <div className="mt-4 p-4 bg-gray-50 rounded border border-gray-200">
                         <h4 className="font-bold text-sm mb-2 text-gray-700">⚙️ 管理员设置</h4>
-                        
-                        {/* 充值区域 */}
                         <div className="bg-white p-3 rounded border border-blue-100 mb-3">
-                            <h5 className="text-xs font-bold text-blue-600 mb-2">🍬 预售资金池 (Candy) - 必须充值才能开卖！</h5>
+                            <h5 className="text-xs font-bold text-blue-600 mb-2">🍬 预售资金池 (Candy)</h5>
                             <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>目标总量: {project.presaleAmount}</span>
-                                <span className={parseFloat(project.contractBalance) < parseFloat(project.presaleAmount) ? "text-red-500 font-bold" : "text-green-600"}>
-                                    当前库存: {project.contractBalance}
-                                </span>
+                                <span>目标: {project.presaleAmount}</span>
+                                <span className={parseFloat(project.contractBalance) < parseFloat(project.presaleAmount) ? "text-red-500 font-bold" : "text-green-600"}>当前: {project.contractBalance}</span>
                             </div>
                             <div className="flex gap-2">
-                                <input 
-                                    className="flex-1 border p-1 rounded text-sm" 
-                                    placeholder="输入充值数量"
-                                    value={candyAmount} 
-                                    onChange={e => setCandyAmount(e.target.value)} 
-                                />
-                                <button onClick={fillGap} className="text-xs text-blue-500 underline whitespace-nowrap">补齐差额</button>
+                                <input className="flex-1 border p-1 rounded text-sm" placeholder="输入充值数量" value={candyAmount} onChange={e => setCandyAmount(e.target.value)} />
+                                <button onClick={fillGap} className="text-xs text-blue-500 underline">补齐</button>
                             </div>
-                            <Button onClick={handleAddCandy} disabled={working} variant="warning" className="w-full mt-2 text-xs py-1">
-                                {working ? "充值中..." : "注入代币 (AddCandy)"}
-                            </Button>
+                            <Button onClick={handleAddCandy} disabled={working} variant="warning" className="w-full mt-2 text-xs py-1">{working ? "充值中..." : "注入代币 (AddCandy)"}</Button>
                         </div>
-
-                        <div className="flex justify-end">
-                            <Button onClick={onClose} variant="secondary" className="text-xs py-1">关闭</Button>
-                        </div>
+                        <div className="flex justify-end"><Button onClick={onClose} variant="secondary" className="text-xs py-1">关闭</Button></div>
                     </div>
                 );
             };
@@ -418,16 +229,18 @@
                 const [userBalance, setUserBalance] = useState("0");
                 const [showSettings, setShowSettings] = useState(false);
 
-                const startBlock = parseInt(project.startBlock);
-                const endBlock = parseInt(project.endBlock);
-                const isStarted = currentBlock >= startBlock;
-                const isEnded = currentBlock > endBlock;
-                const blocksToStart = startBlock - currentBlock;
-
+                const startBlock = parseInt(project.startBlock), endBlock = parseInt(project.endBlock);
+                const isStarted = currentBlock >= startBlock, isEnded = currentBlock > endBlock;
                 const minBuyReadable = ethers.formatUnits(project.minPerBuy, project.baseDecimals);
-                const maxBuyReadable = ethers.formatUnits(project.maxBuy, project.baseDecimals);
-                
                 const isAdmin = account && (account.toLowerCase() === project.admin.toLowerCase());
+
+                // 计算预计获得数量
+                const estimatedOutput = buyAmount && project.exchangeRate 
+                    ? (parseFloat(buyAmount) * parseFloat(project.exchangeRate)).toFixed(2) 
+                    : "0";
+                
+                // 检查库存是否足够本次购买
+                const isStockEnough = parseFloat(project.contractBalance) >= parseFloat(estimatedOutput);
 
                 useEffect(() => {
                     if (account && project.baseToken && provider) {
@@ -436,7 +249,7 @@
                                 const tokenContract = new ethers.Contract(project.baseToken, ERC20_ABI, provider);
                                 const bal = await tokenContract.balanceOf(account);
                                 setUserBalance(ethers.formatUnits(bal, project.baseDecimals));
-                            } catch(e) { console.error("Balance error", e); }
+                            } catch(e) {}
                         };
                         fetchBalance();
                     }
@@ -444,56 +257,33 @@
 
                 const handleBuy = async () => {
                     if (!signer) return alert("请先连接钱包");
-                    
-                    if (parseFloat(buyAmount) < parseFloat(minBuyReadable)) {
-                        return alert(`购买数量不能低于最小限额: ${minBuyReadable} ${project.baseSymbol}\n（这是合约硬性规定的，买太少会报错）`);
-                    }
-
-                    if (parseFloat(project.contractBalance) <= 0) {
-                        return alert("❌ 售罄 (Sold Out)！\n管理员尚未注入代币，请联系管理员充值。");
-                    }
+                    if (parseFloat(buyAmount) < parseFloat(minBuyReadable)) return alert(`购买量不能低于 ${minBuyReadable} ${project.baseSymbol}`);
+                    if (!isStockEnough) return alert(`库存不足！你想要买 ${estimatedOutput} 个，但库存只有 ${project.contractBalance} 个。请减少购买量或联系管理员充值。`);
 
                     setBuying(true);
                     try {
                         const projectContract = new ethers.Contract(project.address, PROJECT_ABI, signer);
                         const baseTokenContract = new ethers.Contract(project.baseToken, ERC20_ABI, signer);
-                        
                         const amountWei = ethers.parseUnits(buyAmount, project.baseDecimals);
 
                         console.log("Approving...");
-                        setStatusMsg(`步骤1/2: 正在授权 ${buyAmount} ${project.baseSymbol}...`);
+                        setStatusMsg(`授权 ${buyAmount} ${project.baseSymbol}...`);
                         const approveTx = await baseTokenContract.approve(project.address, amountWei);
                         await approveTx.wait();
                         
                         console.log("Buying...");
-                        setStatusMsg(`步骤2/2: 正在购买...`);
+                        setStatusMsg(`购买中...`);
                         const buyTx = await projectContract.buyToken(amountWei);
                         await buyTx.wait();
                         
-                        alert(`🎉 购买成功！\n消耗: ${buyAmount} ${project.baseSymbol}`);
-                        
-                        setStatusMsg("刷新数据中...");
-                        setRefreshTrigger(prev => prev + 1); 
-                        fetchProjects();
-                    } catch (err) {
-                        console.error(err);
-                        setStatusMsg("");
-                        let msg = err.reason || err.message || JSON.stringify(err);
-                        if (msg.includes("Not started")) msg = "错误：项目尚未开始！请等待开始区块。";
-                        if (msg.includes("Ended")) msg = "错误：项目已结束！";
-                        if (msg.includes("exceeds balance")) msg = "错误：您的基础代币余额不足！";
-                        if (msg.includes("Below min")) msg = `错误：购买数量低于最小限额 (${minBuyReadable} ${project.baseSymbol})！`;
-                        if (msg.includes("Sold out")) msg = "错误：项目已售罄（或管理员未充值）！";
-                        alert(msg);
-                    } finally {
-                        setBuying(false);
-                        setStatusMsg("");
-                    }
+                        alert(`🎉 购买成功！获得 ${estimatedOutput} ${project.tokenSymbol}`);
+                        setRefreshTrigger(p => p+1); fetchProjects();
+                    } catch (err) { 
+                        let msg = err.reason || err.message;
+                        if (msg.includes("Sold out")) msg = "错误：库存不足 (Sold Out)，请联系管理员充值！";
+                        alert(msg); 
+                    } finally { setBuying(false); setStatusMsg(""); }
                 };
-
-                const progress = project.presaleAmount > 0 
-                    ? (Number(project.saleAmount) / Number(project.presaleAmount)) * 100 
-                    : 0;
 
                 return (
                     <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-blue-500">
@@ -503,78 +293,44 @@
                                 <p className="text-xs text-gray-500 font-mono mt-1">合约: {project.address.slice(0,6)}...{project.address.slice(-4)}</p>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${project.paused ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                                    {project.paused ? '暂停中' : '进行中'}
-                                </span>
-                                {!isStarted && (
-                                    <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">
-                                        ⏳ 未开始 ({blocksToStart}块)
-                                    </span>
-                                )}
-                                {isEnded && (
-                                    <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">
-                                        🏁 已结束
-                                    </span>
-                                )}
+                                {!isStarted && <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">⏳ 未开始</span>}
+                                {isEnded && <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">🏁 已结束</span>}
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${project.paused ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{project.paused ? '暂停中' : '进行中'}</span>
                             </div>
                         </div>
 
                         <div className="space-y-3 mb-6">
                             <div className="flex justify-between text-sm bg-blue-50 p-2 rounded">
-                                <span className="text-blue-800">1 {project.baseSymbol} = {project.exchangeRate} {project.tokenSymbol}</span>
+                                <span className="text-blue-800 font-bold">1 {project.baseSymbol} = {project.exchangeRate} {project.tokenSymbol}</span>
                             </div>
-                            
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">购买限制</span>
-                                <div className="text-right text-xs">
-                                    <span className="block text-red-600 font-bold">Min: {minBuyReadable} {project.baseSymbol}</span>
-                                    {maxBuyReadable !== "0.0" && <span className="block">Max: {maxBuyReadable}</span>}
-                                </div>
+                            <div className="flex justify-between text-sm text-gray-600">
+                                <span>起买限制:</span>
+                                <span className="text-red-600 font-bold">{minBuyReadable} {project.baseSymbol}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">募集进度</span>
-                                <span className="font-semibold">{Number(project.saleAmount).toFixed(2)} / {Number(project.presaleAmount).toFixed(2)}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                                <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(progress, 100)}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-400">
-                                <span>合约库存: {project.contractBalance} {project.tokenSymbol}</span>
+                            <div className="flex justify-between text-sm text-gray-600">
+                                <span>当前库存:</span>
+                                <span className={isStockEnough ? "text-green-600" : "text-red-600 font-bold"}>{project.contractBalance} {project.tokenSymbol}</span>
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex justify-between text-xs text-gray-500">
                                 <span>余额: {parseFloat(userBalance).toLocaleString()} {project.baseSymbol}</span>
-                                <button onClick={() => setRefreshTrigger(p => p+1)} className="text-blue-500 hover:underline">刷新</button>
+                                {buyAmount && <span className="text-blue-600 font-bold">≈ 获得 {estimatedOutput} {project.tokenSymbol}</span>}
                             </div>
                             <div className="flex gap-2">
-                                <input 
-                                    type="number" 
-                                    placeholder={`起买: ${minBuyReadable}`} 
-                                    value={buyAmount}
-                                    onChange={(e) => setBuyAmount(e.target.value)}
-                                    className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <Button 
-                                    onClick={handleBuy} 
-                                    disabled={buying || project.paused || !isStarted || isEnded} 
-                                    className={`min-w-[80px] ${!isStarted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {buying ? "处理中" : !isStarted ? "未开始" : isEnded ? "已结束" : "购买"}
+                                <input type="number" placeholder={`Min ${minBuyReadable}`} value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <Button onClick={handleBuy} disabled={buying || project.paused || !isStarted || isEnded} className="min-w-[80px]">
+                                    {buying ? "..." : "购买"}
                                 </Button>
                             </div>
+                            {buyAmount && !isStockEnough && <p className="text-xs text-red-500 text-center">⚠️ 购买量超过当前库存，交易将失败！</p>}
                         </div>
 
-                        {/* 管理员设置入口 (只保留充值) */}
                         {isAdmin && (
                             <div className="mt-4 pt-4 border-t border-gray-100">
-                                <button 
-                                    onClick={() => setShowSettings(!showSettings)}
-                                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600"
-                                >
-                                    <SettingsIcon size={14} /> 
-                                    {showSettings ? "收起设置" : "管理员设置 (充值)"}
+                                <button onClick={() => setShowSettings(!showSettings)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600">
+                                    <SettingsIcon size={14} /> {showSettings ? "收起" : "管理员充值"}
                                 </button>
                                 {showSettings && <AdminSettings project={project} onClose={() => setShowSettings(false)} />}
                             </div>
@@ -585,156 +341,43 @@
 
             return (
                 <div className="max-w-6xl mx-auto p-8 relative">
-                    {statusMsg && (
-                        <div className="fixed top-0 left-0 w-full bg-blue-600 text-white p-3 text-center shadow-lg z-50 flex items-center justify-center gap-2">
-                            <LoaderIcon size={20} className="text-white" />
-                            <span className="font-bold">{statusMsg}</span>
-                        </div>
-                    )}
-
+                    {statusMsg && <div className="fixed top-0 left-0 w-full bg-blue-600 text-white p-3 text-center shadow-lg z-50 flex items-center justify-center gap-2"><LoaderIcon size={20} className="text-white" /><span className="font-bold">{statusMsg}</span></div>}
                     <div className="flex justify-between items-center mb-10 mt-8">
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-                                <CoinsIcon size={24} />
-                            </div>
-                            <h1 className="text-2xl font-bold tracking-tight">Web3 Launchpad</h1>
-                        </div>
-                        
+                        <div className="flex items-center gap-2"><div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white"><CoinsIcon size={24} /></div><h1 className="text-2xl font-bold tracking-tight">Web3 Launchpad</h1></div>
                         <div className="flex items-center gap-4">
-                            {isWhitelisted && (
-                                <span className="flex items-center gap-1 text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full border border-yellow-200">
-                                    <CheckCircleIcon size={14} /> 白名单用户 (Creator)
-                                </span>
-                            )}
-                            
-                            {!account ? (
-                                <Button onClick={connectWallet}>
-                                    <WalletIcon size={18} /> 连接钱包
-                                </Button>
-                            ) : (
-                                <div className="flex items-center gap-2 bg-white border px-4 py-2 rounded-lg">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-sm font-mono text-gray-600">
-                                            {account.slice(0, 6)}...{account.slice(-4)}
-                                        </span>
-                                        <span className="text-xs text-blue-500">区块: {currentBlock}</span>
-                                    </div>
-                                </div>
-                            )}
+                            {isWhitelisted && <span className="flex items-center gap-1 text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full border border-yellow-200"><CheckCircleIcon size={14} /> 白名单用户 (Creator)</span>}
+                            {!account ? <Button onClick={connectWallet}><WalletIcon size={18} /> 连接钱包</Button> : <div className="flex items-center gap-2 bg-white border px-4 py-2 rounded-lg"><div className="w-2 h-2 bg-green-500 rounded-full"></div><div className="flex flex-col items-end"><span className="text-sm font-mono text-gray-600">{account.slice(0, 6)}...{account.slice(-4)}</span><span className="text-xs text-blue-500">区块: {currentBlock}</span></div></div>}
                         </div>
                     </div>
-
                     <div className="space-y-8">
                         {account && isWhitelisted && (
                             <section>
-                                <div className="flex justify-between items-end mb-4">
-                                    <h2 className="text-xl font-bold text-gray-800">项目管理 (Admin)</h2>
-                                    <Button variant="outline" onClick={() => setShowCreateForm(!showCreateForm)}>
-                                        {showCreateForm ? '取消创建' : <span><span className="inline-block mr-1 text-lg leading-none align-middle">+</span>创建新项目</span>}
-                                    </Button>
-                                </div>
-                                
+                                <div className="flex justify-between items-end mb-4"><h2 className="text-xl font-bold text-gray-800">项目管理 (Admin)</h2><Button variant="outline" onClick={() => setShowCreateForm(!showCreateForm)}>{showCreateForm ? '取消创建' : <span><span className="inline-block mr-1 text-lg leading-none align-middle">+</span>创建新项目</span>}</Button></div>
                                 {showCreateForm && (
                                     <Card className="mb-8 border-blue-200 ring-4 ring-blue-50/50">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="font-bold text-lg">配置新 IDO 项目</h3>
-                                            <button 
-                                                onClick={autofillBlocks}
-                                                className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200"
-                                            >
-                                                ✨ 一键填充 (缓冲+200块)
-                                            </button>
-                                        </div>
-                                        
+                                        <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg">配置新 IDO 项目</h3><button onClick={autofillBlocks} className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200">✨ 一键填充 (缓冲+200块)</button></div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm text-gray-600 mb-1">预售代币地址 (Presale Token)</label>
-                                                <input className="w-full border p-2 rounded" placeholder="例如: 0x... (你卖的币)" 
-                                                    onChange={e => setFormData({...formData, presaleToken: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm text-gray-600 mb-1">基础代币地址 (USDT/Base)</label>
-                                                <input className="w-full border p-2 rounded" placeholder="例如: 0x... (支付用的币)" 
-                                                    onChange={e => setFormData({...formData, baseToken: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm text-gray-600 mb-1">预售总数量</label>
-                                                <input type="number" className="w-full border p-2 rounded" placeholder="100000" 
-                                                    onChange={e => setFormData({...formData, presaleAmount: e.target.value})} />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm text-gray-600 mb-1">代币精度 (Decimals)</label>
-                                                <select className="w-full border p-2 rounded bg-white" 
-                                                    value={formData.tokenDecimals}
-                                                    onChange={e => setFormData({...formData, tokenDecimals: e.target.value})}>
-                                                    <option value="18">18 (标准ERC20)</option>
-                                                    <option value="6">6 (USDT/USDC)</option>
-                                                    <option value="8">8 (WBTC)</option>
-                                                </select>
-                                                <p className="text-xs text-gray-400 mt-1">注意：如果不知道请保持18。USDT是6。</p>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm text-gray-600 mb-1">汇率 (1 Base = ? Token)</label>
-                                                <input type="number" className="w-full border p-2 rounded" placeholder="100" 
-                                                    onChange={e => setFormData({...formData, exchangeRate: e.target.value})} />
-                                            </div>
-                                            <div className="bg-gray-50 p-2 rounded">
-                                                <label className="block text-sm text-gray-600 mb-1">开始区块 (Start Block)</label>
-                                                <input type="number" className="w-full border p-2 rounded bg-white" 
-                                                    placeholder={`必须 > ${currentBlock}`}
-                                                    value={formData.startBlock}
-                                                    onChange={e => setFormData({...formData, startBlock: e.target.value})} />
-                                                <p className={`text-xs mt-1 ${parseInt(formData.startBlock) <= currentBlock ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
-                                                    当前高度: {currentBlock} (相差: {parseInt(formData.startBlock || 0) - currentBlock})
-                                                </p>
-                                            </div>
-                                            <div className="bg-gray-50 p-2 rounded">
-                                                <label className="block text-sm text-gray-600 mb-1">结束区块 (End Block)</label>
-                                                <input type="number" className="w-full border p-2 rounded bg-white" 
-                                                    placeholder={`建议: ${currentBlock + 7200}`}
-                                                    value={formData.endBlock}
-                                                    onChange={e => setFormData({...formData, endBlock: e.target.value})} />
-                                            </div>
+                                            <div><label className="block text-sm text-gray-600 mb-1">预售代币地址 (Presale Token)</label><input className="w-full border p-2 rounded" placeholder="例如: 0x... (你卖的币)" onChange={e => setFormData({...formData, presaleToken: e.target.value})} /></div>
+                                            <div><label className="block text-sm text-gray-600 mb-1">基础代币地址 (USDT/Base)</label><input className="w-full border p-2 rounded" placeholder="例如: 0x... (支付用的币)" onChange={e => setFormData({...formData, baseToken: e.target.value})} /></div>
+                                            <div><label className="block text-sm text-gray-600 mb-1">预售总数量</label><input type="number" className="w-full border p-2 rounded" placeholder="100000" onChange={e => setFormData({...formData, presaleAmount: e.target.value})} /></div>
+                                            <div><label className="block text-sm text-gray-600 mb-1">代币精度 (Decimals)</label><select className="w-full border p-2 rounded bg-white" value={formData.tokenDecimals} onChange={e => setFormData({...formData, tokenDecimals: e.target.value})}><option value="18">18 (标准ERC20)</option><option value="6">6 (USDT/USDC)</option><option value="8">8 (WBTC)</option></select><p className="text-xs text-gray-400 mt-1">注意：如果不知道请保持18。USDT是6。</p></div>
+                                            <div><label className="block text-sm text-gray-600 mb-1">汇率 (1 Base = ? Token)</label><input type="number" className="w-full border p-2 rounded" placeholder="100" onChange={e => setFormData({...formData, exchangeRate: e.target.value})} /></div>
+                                            <div className="bg-gray-50 p-2 rounded"><label className="block text-sm text-gray-600 mb-1">开始区块 (Start Block)</label><input type="number" className="w-full border p-2 rounded bg-white" placeholder={`必须 > ${currentBlock}`} value={formData.startBlock} onChange={e => setFormData({...formData, startBlock: e.target.value})} /></div>
+                                            <div className="bg-gray-50 p-2 rounded"><label className="block text-sm text-gray-600 mb-1">结束区块 (End Block)</label><input type="number" className="w-full border p-2 rounded bg-white" placeholder={`建议: ${currentBlock + 7200}`} value={formData.endBlock} onChange={e => setFormData({...formData, endBlock: e.target.value})} /></div>
                                         </div>
-                                        <div className="mt-6 flex justify-end">
-                                            <Button onClick={handleCreateProject} disabled={!!statusMsg}>
-                                                {statusMsg ? "操作进行中..." : "确认部署上链"}
-                                            </Button>
-                                        </div>
+                                        <div className="mt-6 flex justify-end"><Button onClick={handleCreateProject} disabled={!!statusMsg}>{statusMsg ? "操作进行中..." : "确认部署上链"}</Button></div>
                                     </Card>
                                 )}
                             </section>
                         )}
-
                         <section>
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                    <PlayIcon size={20} className="text-blue-500" />
-                                    正在进行的 IDO
-                                </h2>
-                                <Button variant="secondary" onClick={fetchProjects} className="text-sm">
-                                    <RefreshIcon size={14} className={loading ? "animate-spin" : ""} /> 刷新列表
-                                </Button>
-                            </div>
-
-                            {projects.length === 0 ? (
-                                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                                    <p className="text-gray-500">暂无项目，等待管理员创建...</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {projects.map((proj) => (
-                                        <ProjectCard key={proj.address} project={proj} currentBlock={currentBlock} />
-                                    ))}
-                                </div>
-                            )}
+                            <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><PlayIcon size={20} className="text-blue-500" />正在进行的 IDO</h2><Button variant="secondary" onClick={fetchProjects} className="text-sm"><RefreshIcon size={14} className={loading ? "animate-spin" : ""} /> 刷新列表</Button></div>
+                            {projects.length === 0 ? <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300"><p className="text-gray-500">暂无项目，等待管理员创建...</p></div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{projects.map((proj) => <ProjectCard key={proj.address} project={proj} currentBlock={currentBlock} />)}</div>}
                         </section>
                     </div>
                 </div>
             );
         }
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<LaunchpadApp />);
     </script>
