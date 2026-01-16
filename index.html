@@ -61,9 +61,6 @@
         const LoaderIcon = ({ size = 20, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`animate-spin ${className}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
         );
-        const SettingsIcon = ({ size = 20, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        );
 
         // --- 1. 配置与 ABI ---
         const FACTORY_ADDRESS = "0x381dd293A5dE117D0466Ab56f8A4af6237CbCf23";
@@ -88,11 +85,7 @@
             "function product() view returns (uint256, uint256, address, address, uint256, uint256, uint256, uint256, address, uint256)",
             "function setting() view returns (uint256, uint256, bool, bool)",
             "function buyToken(uint256 amount)",
-            "function addCandy(uint256 amount)",
-            // 管理功能
-            "function updateSetting(uint256 _maxBuy, uint256 _minPerBuy)",
-            "function pauseProject()",
-            "function resumeProject()"
+            "function addCandy(uint256 amount)"
         ];
 
         // --- 2. 辅助组件 ---
@@ -108,9 +101,7 @@
                 primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
                 secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100",
                 outline: "border border-gray-300 text-gray-700 hover:bg-gray-50",
-                success: "bg-green-600 text-white hover:bg-green-700",
-                danger: "bg-red-50 text-red-600 hover:bg-red-100",
-                warning: "bg-yellow-500 text-white hover:bg-yellow-600"
+                success: "bg-green-600 text-white hover:bg-green-700"
             };
             return (
                 <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>
@@ -130,7 +121,7 @@
             const [showCreateForm, setShowCreateForm] = useState(false);
             const [currentBlock, setCurrentBlock] = useState(0);
             const [statusMsg, setStatusMsg] = useState(""); 
-            const [refreshTrigger, setRefreshTrigger] = useState(0); 
+            const [refreshTrigger, setRefreshTrigger] = useState(0); // 用于触发余额刷新
             
             const [formData, setFormData] = useState({
                 presaleToken: "",
@@ -156,6 +147,8 @@
                         
                         const block = await _provider.getBlockNumber();
                         setCurrentBlock(block);
+                        console.log("当前区块高度:", block);
+
                         checkWhitelist(_account, _provider);
                     } catch (err) {
                         console.error("连接过程出错:", err);
@@ -176,6 +169,7 @@
                 }
             };
 
+            // 数据获取
             const fetchProjects = async () => {
                 if (!provider) return;
                 setLoading(true);
@@ -192,6 +186,7 @@
                             const product = await projectContract.product();
                             const setting = await projectContract.setting();
                             
+                            // 获取代币符号
                             let tokenSymbol = "TOKEN";
                             let presaleDecimals = 18;
                             try {
@@ -200,20 +195,13 @@
                                 presaleDecimals = Number(await tokenContract.decimals());
                             } catch (e) {}
 
+                            // 获取 Base Token 精度
                             let baseDecimals = 18;
                             let baseSymbol = "BASE";
                             try {
                                 const baseTokenContract = new ethers.Contract(product[3], ERC20_ABI, provider);
                                 baseDecimals = Number(await baseTokenContract.decimals());
                                 baseSymbol = await baseTokenContract.symbol();
-                            } catch(e) {}
-
-                            // 获取合约本身的预售代币余额 (即库存)
-                            let contractBalance = "0";
-                            try {
-                                const tokenContract = new ethers.Contract(product[2], ERC20_ABI, provider);
-                                const balanceWei = await tokenContract.balanceOf(addr);
-                                contractBalance = ethers.formatUnits(balanceWei, presaleDecimals);
                             } catch(e) {}
 
                             return {
@@ -232,8 +220,7 @@
                                 baseDecimals, 
                                 presaleDecimals,
                                 minPerBuy: setting[1], 
-                                maxBuy: setting[0],
-                                contractBalance // 合约实际库存
+                                maxBuy: setting[0]     
                             };
                         } catch (err) {
                             console.error(`获取项目 ${addr} 详情失败`, err);
@@ -304,15 +291,36 @@
                     const decimals = parseInt(formData.tokenDecimals || "18");
                     const amountWei = ethers.parseUnits(formData.presaleAmount, decimals);
 
-                    // 1. 创建项目 (不强制授权，因为创建本身不需要转币，转币在 AddCandy)
-                    setStatusMsg("🚀 正在发起创建交易...");
+                    setStatusMsg("💰 正在检查代币余额...");
+                    const presaleTokenContract = new ethers.Contract(formData.presaleToken, ERC20_ABI, signer);
+                    const balance = await presaleTokenContract.balanceOf(account);
+                    
+                    if (balance < amountWei) {
+                        setStatusMsg("❌ 余额不足");
+                        throw new Error(`TRANSFER_EXCEEDS_BALANCE: 您的余额不足！\n当前余额: ${ethers.formatUnits(balance, decimals)}`);
+                    }
+
+                    setStatusMsg("🔐 正在检查授权...");
+                    const currentAllowance = await presaleTokenContract.allowance(account, FACTORY_ADDRESS);
+                    
+                    if (currentAllowance < amountWei) {
+                        setStatusMsg("👉 请在钱包中点击【批准/Approve】...");
+                        const approveTx = await presaleTokenContract.approve(FACTORY_ADDRESS, amountWei, { gasLimit: 200000 });
+                        
+                        setStatusMsg("⏳ 授权交易上链中...");
+                        await approveTx.wait();
+                    } else {
+                        console.log("已授权，跳过");
+                    }
+
+                    setStatusMsg("🚀 授权完成！请在钱包中点击【确认创建】...");
                     const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
                     
                     const tx = await factory.createProject(
                         finalStartBlock,
                         finalEndBlock,
                         formData.presaleToken,
-                        amountWei, // 这个 amount 只是设置上限，不涉及转账
+                        amountWei, 
                         formData.baseToken,
                         BigInt(formData.exchangeRate),
                         account,
@@ -323,7 +331,7 @@
                     setStatusMsg("⏳ 项目部署中，请稍候...");
                     await tx.wait();
                     
-                    setStatusMsg("✅ 项目创建成功！请在列表中找到项目并充值代币。");
+                    setStatusMsg("✅ 项目创建成功！正在刷新...");
                     setTimeout(() => {
                         setShowCreateForm(false);
                         setStatusMsg("");
@@ -338,90 +346,10 @@
                 }
             };
 
-            // 管理员设置面板 (包含充值功能)
-            const AdminSettings = ({ project, onClose }) => {
-                const [candyAmount, setCandyAmount] = useState("");
-                const [working, setWorking] = useState(false);
-
-                // 自动填入缺口
-                const fillGap = () => {
-                    const target = parseFloat(project.presaleAmount);
-                    const current = parseFloat(project.contractBalance);
-                    const gap = target - current;
-                    setCandyAmount(gap > 0 ? gap.toString() : "0");
-                };
-
-                const handleAddCandy = async () => {
-                    if (!signer) return;
-                    setWorking(true);
-                    try {
-                        const projectContract = new ethers.Contract(project.address, PROJECT_ABI, signer);
-                        const tokenContract = new ethers.Contract(project.presaleToken, ERC20_ABI, signer);
-                        
-                        const amountWei = ethers.parseUnits(candyAmount, project.presaleDecimals);
-
-                        // 1. 授权
-                        setStatusMsg("🔐 正在授权转入...");
-                        const approveTx = await tokenContract.approve(project.address, amountWei);
-                        await approveTx.wait();
-
-                        // 2. 充值
-                        setStatusMsg("🍬 正在注入代币...");
-                        const addTx = await projectContract.addCandy(amountWei);
-                        await addTx.wait();
-
-                        setStatusMsg("✅ 充值成功！");
-                        alert("充值成功！现在用户可以购买了。");
-                        fetchProjects(); // 刷新数据
-                        setCandyAmount("");
-                    } catch (err) {
-                        console.error(err);
-                        alert("充值失败: " + (err.reason || err.message));
-                    } finally {
-                        setWorking(false);
-                        setStatusMsg("");
-                    }
-                };
-
-                return (
-                    <div className="mt-4 p-4 bg-gray-50 rounded border border-gray-200">
-                        <h4 className="font-bold text-sm mb-2 text-gray-700">⚙️ 管理员设置</h4>
-                        
-                        {/* 充值区域 */}
-                        <div className="bg-white p-3 rounded border border-blue-100 mb-3">
-                            <h5 className="text-xs font-bold text-blue-600 mb-2">🍬 预售资金池 (Candy) - 必须充值才能开卖！</h5>
-                            <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>目标总量: {project.presaleAmount}</span>
-                                <span className={parseFloat(project.contractBalance) < parseFloat(project.presaleAmount) ? "text-red-500 font-bold" : "text-green-600"}>
-                                    当前库存: {project.contractBalance}
-                                </span>
-                            </div>
-                            <div className="flex gap-2">
-                                <input 
-                                    className="flex-1 border p-1 rounded text-sm" 
-                                    placeholder="输入充值数量"
-                                    value={candyAmount} 
-                                    onChange={e => setCandyAmount(e.target.value)} 
-                                />
-                                <button onClick={fillGap} className="text-xs text-blue-500 underline whitespace-nowrap">补齐差额</button>
-                            </div>
-                            <Button onClick={handleAddCandy} disabled={working} variant="warning" className="w-full mt-2 text-xs py-1">
-                                {working ? "充值中..." : "注入代币 (AddCandy)"}
-                            </Button>
-                        </div>
-
-                        <div className="flex justify-end">
-                            <Button onClick={onClose} variant="secondary" className="text-xs py-1">关闭</Button>
-                        </div>
-                    </div>
-                );
-            };
-
             const ProjectCard = ({ project, currentBlock }) => {
                 const [buyAmount, setBuyAmount] = useState("");
                 const [buying, setBuying] = useState(false);
                 const [userBalance, setUserBalance] = useState("0");
-                const [showSettings, setShowSettings] = useState(false);
 
                 const startBlock = parseInt(project.startBlock);
                 const endBlock = parseInt(project.endBlock);
@@ -431,32 +359,26 @@
 
                 const minBuyReadable = ethers.formatUnits(project.minPerBuy, project.baseDecimals);
                 const maxBuyReadable = ethers.formatUnits(project.maxBuy, project.baseDecimals);
-                
-                const isAdmin = account && (account.toLowerCase() === project.admin.toLowerCase());
+
+                const fetchBalance = useCallback(async () => {
+                    if (account && project.baseToken && provider) {
+                        try {
+                            const tokenContract = new ethers.Contract(project.baseToken, ERC20_ABI, provider);
+                            const bal = await tokenContract.balanceOf(account);
+                            setUserBalance(ethers.formatUnits(bal, project.baseDecimals));
+                        } catch(e) { console.error("Balance error", e); }
+                    }
+                }, [account, project.baseToken, project.baseDecimals]);
 
                 useEffect(() => {
-                    if (account && project.baseToken && provider) {
-                        const fetchBalance = async () => {
-                            try {
-                                const tokenContract = new ethers.Contract(project.baseToken, ERC20_ABI, provider);
-                                const bal = await tokenContract.balanceOf(account);
-                                setUserBalance(ethers.formatUnits(bal, project.baseDecimals));
-                            } catch(e) { console.error("Balance error", e); }
-                        };
-                        fetchBalance();
-                    }
-                }, [account, project.baseToken, refreshTrigger]);
+                    fetchBalance();
+                }, [fetchBalance, refreshTrigger]); // 依赖 refreshTrigger 来强制刷新余额
 
                 const handleBuy = async () => {
                     if (!signer) return alert("请先连接钱包");
                     
                     if (parseFloat(buyAmount) < parseFloat(minBuyReadable)) {
                         return alert(`购买数量不能低于最小限额: ${minBuyReadable} ${project.baseSymbol}\n（这是合约硬性规定的，买太少会报错）`);
-                    }
-
-                    // 检查合约库存
-                    if (parseFloat(project.contractBalance) <= 0) {
-                        return alert("❌ 售罄 (Sold Out)！\n管理员尚未注入代币，请联系管理员充值。");
                     }
 
                     setBuying(true);
@@ -478,18 +400,18 @@
                         
                         alert(`🎉 购买成功！\n消耗: ${buyAmount} ${project.baseSymbol}`);
                         
+                        // 强制刷新整个列表和余额
                         setStatusMsg("刷新数据中...");
-                        setRefreshTrigger(prev => prev + 1); 
+                        setRefreshTrigger(prev => prev + 1); // 触发余额刷新
                         fetchProjects();
                     } catch (err) {
                         console.error(err);
-                        setStatusMsg("");
+                        setStatusMsg(""); // 清除状态
                         let msg = err.reason || err.message || JSON.stringify(err);
                         if (msg.includes("Not started")) msg = "错误：项目尚未开始！请等待开始区块。";
                         if (msg.includes("Ended")) msg = "错误：项目已结束！";
                         if (msg.includes("exceeds balance")) msg = "错误：您的基础代币余额不足！";
                         if (msg.includes("Below min")) msg = `错误：购买数量低于最小限额 (${minBuyReadable} ${project.baseSymbol})！`;
-                        if (msg.includes("Sold out")) msg = "错误：项目已售罄（或管理员未充值）！";
                         alert(msg);
                     } finally {
                         setBuying(false);
@@ -541,18 +463,15 @@
                                 <span className="text-gray-500">募集进度</span>
                                 <span className="font-semibold">{Number(project.saleAmount).toFixed(2)} / {Number(project.presaleAmount).toFixed(2)}</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                                <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(progress, 100)}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-400">
-                                <span>合约库存: {project.contractBalance} {project.tokenSymbol}</span>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${Math.min(progress, 100)}%` }}></div>
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <div className="flex justify-between text-xs text-gray-500">
                                 <span>余额: {parseFloat(userBalance).toLocaleString()} {project.baseSymbol}</span>
-                                <button onClick={() => setRefreshTrigger(p => p+1)} className="text-blue-500 hover:underline">刷新</button>
+                                <button onClick={fetchBalance} className="text-blue-500 hover:underline">刷新余额</button>
                             </div>
                             <div className="flex gap-2">
                                 <input 
@@ -571,20 +490,6 @@
                                 </Button>
                             </div>
                         </div>
-
-                        {/* 管理员设置入口 */}
-                        {isAdmin && (
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                                <button 
-                                    onClick={() => setShowSettings(!showSettings)}
-                                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600"
-                                >
-                                    <SettingsIcon size={14} /> 
-                                    {showSettings ? "收起设置" : "管理员设置"}
-                                </button>
-                                {showSettings && <AdminSettings project={project} onClose={() => setShowSettings(false)} />}
-                            </div>
-                        )}
                     </Card>
                 );
             };
