@@ -86,11 +86,7 @@
             "function product() view returns (uint256, uint256, address, address, uint256, uint256, uint256, uint256, address, uint256)",
             "function setting() view returns (uint256, uint256, bool, bool)",
             "function buyToken(uint256 amount)",
-            "function addCandy(uint256 amount)",
-            // 管理功能
-            "function updateSetting(uint256 _maxBuy, uint256 _minPerBuy)",
-            "function pauseProject()",
-            "function resumeProject()"
+            "function addCandy(uint256 amount)"
         ];
 
         // --- 2. 辅助组件 ---
@@ -154,8 +150,6 @@
                         
                         const block = await _provider.getBlockNumber();
                         setCurrentBlock(block);
-                        console.log("当前区块高度:", block);
-
                         checkWhitelist(_account, _provider);
                     } catch (err) {
                         console.error("连接过程出错:", err);
@@ -285,28 +279,20 @@
                 if (!signer) return;
                 try {
                     setStatusMsg("🔍 正在检查区块高度...");
-                    // 再次获取最新区块，防止过期
                     const latestBlock = await provider.getBlockNumber();
                     let finalStartBlock = BigInt(formData.startBlock);
                     let finalEndBlock = BigInt(formData.endBlock);
 
-                    // 核心修复：更激进的时间修正
-                    // 只要 开始时间 < 当前时间 + 50，就自动往后推 200 个块
                     if (finalStartBlock <= BigInt(latestBlock) + 50n) {
-                        const safeStart = BigInt(latestBlock) + 200n; // 强制 +200 块缓冲
+                        const safeStart = BigInt(latestBlock) + 200n; 
                         const safeEnd = safeStart + 7200n;
-                        
-                        console.log("检测到时间过期，自动修正为:", safeStart.toString());
-                        finalStartBlock = safeStart;
-                        finalEndBlock = safeEnd;
-                        
-                        // 可选：如果不希望弹窗打断，可以直接修正。这里保留弹窗提醒
-                        const confirmFix = confirm(`⚠️ 检测到时间可能过期（操作耗时导致）。\n\n为您自动修正为最新区块 + 200 (约几分钟后开始)？\n\n点击【确定】继续交易，点击【取消】中止。`);
+                        const confirmFix = confirm(`⚠️ 开始时间可能已过期！\n\n建议自动修正为：\n最新区块 + 200 (约几分钟后开始)`);
                         if (!confirmFix) {
                             setStatusMsg("");
                             return;
                         }
-                        
+                        finalStartBlock = safeStart;
+                        finalEndBlock = safeEnd;
                         setFormData({...formData, startBlock: safeStart.toString(), endBlock: safeEnd.toString()});
                     }
 
